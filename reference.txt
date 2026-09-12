@@ -1,0 +1,47 @@
+How do we convert a pharmaceutical PDF into usable text?
+    for PDF → Text  We're using PyMuPDF initially because it gives
+    us straightforward PDF text extraction without adding a large framework
+
+How did you implement document ingestion?
+  I created a FastAPI upload endpoint that accepts PDF files.
+  The backend validates the file type, temporarily stores the document,
+  and passes the file path to a dedicated PDF processing service.
+  PyMuPDF extracts the text page by page, and the extracted content is
+  returned for further processing.
+
+text_cleaner.py
+re is Python's regular expression module.
+Regular expressions allow us to find patterns in text.
+Later, if we find that retrieval quality suffers because of PDF formatting,
+ we can improve the document parser
+
+chunker.py
+For pharmaceutical documents, 
+we could eventually make this smarter by respecting sections such as:
+INDICATIONS
+DOSAGE
+CONTRAINDICATIONS
+WARNINGS
+ADVERSE REACTIONS
+
+How did you handle document preprocessing?
+After extracting the PDF text using PyMuPDF, 
+I clean formatting artifacts such as excessive whitespace and blank lines.
+I then split the cleaned document into overlapping chunks. 
+I initially use a 1000-character chunk size with 200 characters of overlap as a baseline. 
+The overlap helps preserve context when information crosses chunk boundaries. For production, 
+I would evaluate the chunking strategy and potentially use semantic or section-aware chunking for pharmaceutical labels
+
+An embedding model converts text into numbers
+
+And never commit this file to GitHub.
+Our .gitignore should contain:
+
+venv/
+.env
+__pycache__/
+uploads/
+
+Our current Step 9 chunker is a baseline implementation. 
+It is deliberately simple. Once we get the complete RAG pipeline working, 
+we'll come back and improve areas that actually affect retrieval quality rather than prematurely optimizing them.
