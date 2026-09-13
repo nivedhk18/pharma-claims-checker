@@ -51,3 +51,4 @@ frontend/build/
 uploads/
 data/
 storage/
+chroma_db/

@@ -45,3 +45,45 @@ uploads/
 Our current Step 9 chunker is a baseline implementation. 
 It is deliberately simple. Once we get the complete RAG pipeline working, 
 we'll come back and improve areas that actually affect retrieval quality rather than prematurely optimizing them.
+
+we create an embedding for the question:
+    Question
+      ↓
+    Embedding
+      ↓
+    Query Vector
+
+Then the vector database searches for the closest vectors.
+    Query Vector
+        ↓
+    Vector Database
+        ↓
+    Most similar vectors
+        ↓
+    Relevant chunks
+
+That is the Retrieval part of RAG.
+
+For a learning project, that's acceptable.
+But in a production system, we'd consider:
+batching embeddings
+rate limits
+retries
+caching
+duplicate detection
+cost
+asynchronous processing
+We'll improve this later if needed.
+This is exactly the type of real-world RAG problem an
+interviewer might ask about.
+
+That can cause duplicate-ID problems.
+We'll handle document IDs and duplicate uploads properly 
+when we improve the ingestion API.
+
+top_k = 5
+    Return the 5 most relevant chunks.
+    We'll tune this later based on retrieval quality.
+
+"How similar are these two vectors?"
+    It calculates a distance between vectors.

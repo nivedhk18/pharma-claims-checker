@@ -4,6 +4,8 @@ from pathlib import Path
 import shutil
 
 from app.services.pdf_processor import process_pdf
+from app.services.embedding_service import create_embedding
+from app.services.vector_store import add_chunks
 
 
 app = FastAPI(
@@ -50,6 +52,18 @@ async def upload_document(file: UploadFile = File(...)):
 
     try:
         chunks = process_pdf(str(file_path))
+
+        embeddings = [
+            create_embedding(chunk)
+            for chunk in chunks
+        ]
+
+        add_chunks(
+            chunks=chunks,
+            embeddings=embeddings,
+            document_name=file.filename,
+        )
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -57,8 +71,7 @@ async def upload_document(file: UploadFile = File(...)):
         )
 
     return {
-    "filename": file.filename,
-    "message": "PDF uploaded and processed successfully.",
-    "chunk_count": len(chunks),
-    "first_chunk": chunks[0] if chunks else "",
-}
+        "filename": file.filename,
+        "message": "PDF uploaded and stored successfully.",
+        "chunk_count": len(chunks),
+    } 
