@@ -87,3 +87,25 @@ top_k = 5
 
 "How similar are these two vectors?"
     It calculates a distance between vectors.
+
+What is distance
+    Chroma also provides a distance value representing 
+    how close the retrieved vector is to the query vector
+
+API contract design
+    I used Pydantic request and response models to validate 
+    the API contract and provide predictable structured data between the backend and frontend.
+
+Idempotent operation: performing the same operation multiple times produces 
+the same final state rather than continuously creating duplicates.
+
+We're not implementing hashing yet, because I want to first 
+understand the basic duplicate-prevention mechanism
+
+How did you prevent retrieval from returning evidence from the wrong drug?
+    I stored medicine information as metadata alongside each chunk in ChromaDB 
+    and used metadata filtering during retrieval. The semantic search therefore 
+    operates only over chunks belonging to the selected medicine.
+
+For now, don't rebuild the chunking system yet. We'll first get the complete 
+application working, then improve retrieval quality systematically.
