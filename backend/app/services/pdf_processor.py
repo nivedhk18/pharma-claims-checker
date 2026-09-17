@@ -17,46 +17,61 @@
 #     document.close()
 
 #     return "\n".join(pages)
-
 import pymupdf
 
 from app.services.text_cleaner import clean_text
 from app.services.chunker import chunk_text
 
 
-def extract_text_from_pdf(file_path: str) -> str:
+def extract_pages_from_pdf(file_path: str) -> list[dict]:
     """
-    Extract text from every page of a PDF.
+    Extract text from a PDF while preserving the page number.
     """
 
     document = pymupdf.open(file_path)
 
     pages = []
 
-    for page in document:
+    for page_number, page in enumerate(document, start=1):
         text = page.get_text()
-        pages.append(text)
+
+        if text.strip():
+            pages.append(
+                {
+                    "page": page_number,
+                    "text": text,
+                }
+            )
 
     document.close()
 
-    raw_text = "\n".join(pages)
-
-    return raw_text
+    return pages
 
 
-def process_pdf(file_path: str) -> list[str]:
+def process_pdf(file_path: str) -> list[dict]:
     """
-    Extract, clean and chunk a PDF.
+    Clean and chunk PDF text while preserving page numbers.
     """
 
-    raw_text = extract_text_from_pdf(file_path)
+    pages = extract_pages_from_pdf(file_path)
 
-    cleaned_text = clean_text(raw_text)
+    processed_chunks = []
 
-    chunks = chunk_text(
-        cleaned_text,
-        chunk_size=1000,
-        overlap=200
-    )
+    for page in pages:
+        cleaned_text = clean_text(page["text"])
 
-    return chunks
+        chunks = chunk_text(
+            cleaned_text,
+            chunk_size=1000,
+            overlap=200,
+        )
+
+        for chunk in chunks:
+            processed_chunks.append(
+                {
+                    "text": chunk,
+                    "page": page["page"],
+                }
+            )
+
+    return processed_chunks

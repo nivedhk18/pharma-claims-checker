@@ -14,13 +14,13 @@ collection = client.get_or_create_collection(
     name=COLLECTION_NAME
 )
 
-
 def add_chunks(
-    chunks: list[str],
+    chunks: list[dict],
     embeddings: list[list[float]],
     document_name: str,
     medicine: str,
 ) -> None:
+
     ids = [
         f"{document_name}_{index}"
         for index in range(len(chunks))
@@ -28,23 +28,30 @@ def add_chunks(
 
     collection.add(
         ids=ids,
-        documents=chunks,
+
+        documents=[
+            chunk["text"]
+            for chunk in chunks
+        ],
+
         embeddings=embeddings,
+
         metadatas=[
-    {
-        "document_name": document_name,
-        "medicine": medicine,
-        "chunk_index": index,
-    }
-    for index in range(len(chunks))
-]
+            {
+                "document_name": document_name,
+                "medicine": medicine,
+                "page": chunk["page"],
+                "chunk_index": index,
+            }
+            for index, chunk in enumerate(chunks)
+        ],
     )
-
-
+    
 def search_chunks(
     query_embedding: list[float],
     medicine: str,
     top_k: int = 5,
+    max_distance: float = 0.65,
 ) -> list[dict]:
 
     results = collection.query(
@@ -66,11 +73,14 @@ def search_chunks(
         metadatas,
         distances,
     ):
+        if distance > max_distance:
+            continue
         retrieved_chunks.append(
             {
                 "text": document,
                 "document_name": metadata["document_name"],
                 "medicine": metadata["medicine"],
+                "page": metadata["page"],
                 "chunk_index": metadata["chunk_index"],
                 "distance": distance,
             }
@@ -87,23 +97,35 @@ def list_documents() -> list[dict]:
         include=["metadatas"]
     )
 
-    document_counts = {}
+    documents = {}
 
     for metadata in results["metadatas"]:
         document_name = metadata["document_name"]
 
-        document_counts[document_name] = (
-            document_counts.get(document_name, 0) + 1
+        if document_name not in documents:
+            documents[document_name] = {
+                "document_name": document_name,
+                "medicine": metadata["medicine"],
+                "pages": set(),
+                "chunk_count": 0,
+            }
+
+        documents[document_name]["pages"].add(
+            metadata["page"]
         )
+
+        documents[document_name]["chunk_count"] += 1
 
     return [
         {
-            "document_name": document_name,
-            "chunk_count": chunk_count,
+            "document_name": document["document_name"],
+            "medicine": document["medicine"],
+            "total_pages": len(document["pages"]),
+            "chunk_count": document["chunk_count"],
+            "status": "ingested",
         }
-        for document_name, chunk_count in document_counts.items()
+        for document in documents.values()
     ]
-
 def document_exists(document_name: str) -> bool:
     """
     Check whether a document is already indexed in ChromaDB.
@@ -117,4 +139,41 @@ def document_exists(document_name: str) -> bool:
     )
 
     return len(results["ids"]) > 0
+def delete_document(document_name: str) -> bool:
+    """
+    Delete all chunks belonging to a document from ChromaDB.
+    """
 
+    results = collection.get(
+        where={
+            "document_name": document_name
+        },
+    )
+
+    document_ids = results["ids"]
+
+    if not document_ids:
+        return False
+
+    collection.delete(
+        ids=document_ids
+    )
+
+    return True
+def list_medicines() -> list[str]:
+    """
+    Return unique medicine names from indexed documents.
+    """
+
+    results = collection.get(
+        include=["metadatas"]
+    )
+
+    medicines = set()
+
+    for metadata in results["metadatas"]:
+        medicines.add(
+            metadata["medicine"]
+        )
+
+    return sorted(medicines)

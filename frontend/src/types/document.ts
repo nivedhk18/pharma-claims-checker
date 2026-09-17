@@ -1,15 +1,13 @@
 export interface DocumentMetadata {
-  document_id: string;
-  filename: string;
+  document_name: string;
   medicine: string;
   total_pages: number;
-  total_chunks: number;
-  upload_date: string;
-  document_hash: string;
+  chunk_count: number;
   status: 'ingested' | 'processing' | 'failed';
 }
 
 export interface DocumentUploadResponse {
+  filename: string;
   message: string;
-  document: DocumentMetadata;
+  chunk_count: number;
 }

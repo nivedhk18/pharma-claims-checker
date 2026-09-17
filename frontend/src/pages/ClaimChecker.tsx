@@ -10,7 +10,7 @@ import type { ClaimCheckResult } from '../types/claim';
 export const ClaimChecker: React.FC = () => {
   const [medicines, setMedicines] = useState<string[]>([]);
   const [selectedMedicine, setSelectedMedicine] = useState<string>('ibuprofen');
-  const [customMedicine, setCustomMedicine] = useState<string>('');
+
   const [claimText, setClaimText] = useState<string>('');
   
   const [loading, setLoading] = useState<boolean>(false);
@@ -37,17 +37,19 @@ export const ClaimChecker: React.FC = () => {
       .then((meds) => {
         if (meds.length > 0) {
           setMedicines(meds);
-          setSelectedMedicine(meds[0].toLowerCase());
+          if (meds.length > 0) {
+            setSelectedMedicine(meds[0].toLowerCase());
+          }
         }
       })
       .catch(() => {
-        setMedicines(['Ibuprofen', 'Metformin', 'Aspirin']);
+        setMedicines([]);
       });
   }, []);
 
   const handleAudit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const activeMed = customMedicine.trim() || selectedMedicine;
+    const activeMed = selectedMedicine;
 
     if (!claimText.trim()) {
       setError("Please enter a pharmaceutical marketing claim to verify.");
@@ -68,6 +70,7 @@ export const ClaimChecker: React.FC = () => {
         claim: claimText.trim()
       });
       setResult(res);
+      setClaimText('');
     } catch (err: any) {
       console.error("Claim check error:", err);
       const msg = err.response?.data?.detail || "Failed to process claim verification request.";
@@ -107,7 +110,6 @@ export const ClaimChecker: React.FC = () => {
                 value={selectedMedicine}
                 onChange={(e) => {
                   setSelectedMedicine(e.target.value);
-                  setCustomMedicine('');
                 }}
                 className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-gray-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none cursor-pointer"
               >
@@ -116,16 +118,13 @@ export const ClaimChecker: React.FC = () => {
                     {med}
                   </option>
                 ))}
-                {medicines.length === 0 && <option value="ibuprofen">Ibuprofen</option>}
+                {medicines.length === 0 && (
+                  <option value="">
+                    No medicines available
+                  </option>
+                )}
               </select>
 
-              <input
-                type="text"
-                placeholder="Or type drug name..."
-                value={customMedicine}
-                onChange={(e) => setCustomMedicine(e.target.value)}
-                className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
-              />
             </div>
           </div>
 

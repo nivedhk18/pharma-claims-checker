@@ -1,23 +1,25 @@
-export type VerdictType = 
-  | 'SUPPORTED' 
-  | 'PARTIALLY_SUPPORTED' 
-  | 'UNSUPPORTED' 
-  | 'MISSING_SAFETY_INFORMATION' 
+export type VerdictType =
+  | 'SUPPORTED'
+  | 'PARTIALLY_SUPPORTED'
+  | 'UNSUPPORTED'
+  | 'MISSING_SAFETY_INFORMATION'
   | 'INSUFFICIENT_EVIDENCE';
 
 export interface EvidenceItem {
+  text: string;
   document_name: string;
   medicine: string;
+  chunk_index: number;
+  distance: number;
   page: number;
-  chunk_id: string;
-  text: string;
-  score?: number;
 }
+
 
 export interface ClaimCheckRequest {
   medicine: string;
   claim: string;
 }
+
 
 export interface ClaimCheckResult {
   claim: string;

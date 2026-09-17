@@ -22,6 +22,27 @@ def verify_claim_with_rag(
         medicine=medicine,
         top_k=top_k,
     )
+    if not retrieved_chunks:
+     return {
+        "claim": claim,
+        "medicine": medicine,
+        "result": {
+            "verdict": "INSUFFICIENT_EVIDENCE",
+            "confidence": 1.0,
+            "explanation": (
+                "No sufficiently relevant evidence was retrieved "
+                "from the indexed pharmaceutical documents."
+            ),
+            "supported_points": [],
+            "unsupported_points": [],
+            "missing_information": [
+                "Relevant evidence was not retrieved from the document store."
+            ],
+        },
+        "evidence": [],
+    }
+
+
 
     # Step 3: Extract only the text for Gemini
     evidence_chunks = [
@@ -42,4 +63,6 @@ def verify_claim_with_rag(
         "result": verification_result,
         "evidence": retrieved_chunks,
     }
+
+
 

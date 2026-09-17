@@ -109,3 +109,30 @@ How did you prevent retrieval from returning evidence from the wrong drug?
 
 For now, don't rebuild the chunking system yet. We'll first get the complete 
 application working, then improve retrieval quality systematically.
+
+
+I initially had page numbers during PDF extraction, but they weren't appearing 
+in the API response. I traced the metadata through the ingestion, vector store, 
+retrieval, and RAG layers. ChromaDB and retrieval were returning the page correctly, 
+so I eventually identified that the FastAPI Pydantic response schema didn't define 
+the page field. Adding it to the response model fixed the issue.
+
+What problems did you face while building your RAG system?
+
+    Initially I used fixed character-based chunking. I noticed 
+    that retrieved pharmaceutical label evidence sometimes split 
+    tables and sentences across chunks. This could reduce retrieval 
+    quality and make the LLM's context harder to interpret. I then 
+    considered structure-aware chunking based on pages, sections, 
+    and paragraphs.
+
+Does RAG prevent hallucinations?
+    No. RAG grounds the model with retrieved evidence, but it 
+    doesn't guarantee factuality. The LLM can still over-infer from 
+    the retrieved context. That's why I constrained the verifier to use 
+    only retrieved evidence, structured its output, validated the verdict 
+    programmatically, and evaluated it with different claim categories.
+
+This is an important RAG concept:
+Top-K controls how many results you retrieve; 
+a similarity threshold controls how relevant those results must be.

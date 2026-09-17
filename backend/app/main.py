@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import shutil
@@ -8,16 +8,16 @@ from app.services.embedding_service import create_embedding
 from app.services.vector_store import (
     add_chunks,
     list_documents,
+    list_medicines,
     document_exists,
-)
-from app.schemas import ClaimCheckRequest
+    delete_document,
+)                                                                                                                           
 from app.services.rag_pipeline import verify_claim_with_rag
 from app.schemas import (
     ClaimCheckRequest,
     ClaimCheckResponse,
     DocumentListResponse,
 )
-from app.services.vector_store import list_documents
 
 app = FastAPI(
     title="Pharma Claims Checker API",
@@ -48,7 +48,10 @@ def health_check():
 
 
 @app.post("/documents/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    medicine: str = Form(...),
+):
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -71,10 +74,10 @@ async def upload_document(file: UploadFile = File(...)):
         chunks = process_pdf(str(file_path))
 
         embeddings = [
-            create_embedding(chunk)
+            create_embedding(chunk["text"])
             for chunk in chunks
         ]
-        medicine = Path(file.filename).stem.lower()
+        medicine = medicine.strip().lower()
         add_chunks(
             chunks=chunks,
             embeddings=embeddings,
@@ -93,6 +96,7 @@ async def upload_document(file: UploadFile = File(...)):
         "message": "PDF uploaded and stored successfully.",
         "chunk_count": len(chunks),
     }
+
 
 @app.post(
     "/claims/check",
@@ -116,14 +120,36 @@ async def check_claim(request: ClaimCheckRequest):
             medicine=request.medicine,
             top_k=5,
         )
+        verification = result["result"]
 
-        return result
+        return {
+            "claim": result["claim"],
+            "medicine": result["medicine"],
+            "verdict": verification["verdict"],
+            "confidence": verification["confidence"],
+            "explanation": verification["explanation"],
+            "supported_points": verification["supported_points"],
+            "unsupported_points": verification["unsupported_points"],
+            "missing_information": verification["missing_information"],
+            "evidence": result["evidence"],
+        }
 
     except Exception as e:
+        error_message = str(e)
+        if "429" in error_message or "quota" in error_message.lower():
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "The AI verification service is temporarily "
+                    "unavailable because the API quota has been reached. "
+                    "Please try again later."
+                )
+            )
         raise HTTPException(
             status_code=500,
             detail=f"Claim verification failed: {str(e)}"
         )
+
 
 @app.get(
     "/documents",
@@ -145,4 +171,50 @@ async def get_documents():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve documents: {str(e)}"
+        )
+
+    
+@app.delete("/documents/{document_name}")
+async def remove_document(document_name: str):
+    """
+    Delete a document from ChromaDB and local storage.
+    """
+
+    file_path = UPLOAD_DIR / document_name
+
+    deleted_from_chroma = delete_document(
+        document_name
+    )
+
+    if not deleted_from_chroma:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found."
+        )
+
+    if file_path.exists():
+        file_path.unlink()
+
+    return {
+        "message": (
+            f"Document '{document_name}' "
+            "deleted successfully."
+        )
+    }    
+
+@app.get("/medicines")
+async def get_medicines():
+    """
+    Return unique medicines with indexed documents.
+    """
+
+    try:
+        medicines = list_medicines()
+
+        return medicines
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve medicines: {str(e)}"
         )

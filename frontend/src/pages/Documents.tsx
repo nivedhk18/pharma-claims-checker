@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState ,useRef, } from 'react';
 import { FileText, Upload, Trash2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { getDocuments, uploadDocument, deleteDocument } from '../services/api';
 import type { DocumentMetadata } from '../types/document';
@@ -7,6 +7,7 @@ export const Documents: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [medicine, setMedicine] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -49,6 +50,9 @@ export const Documents: React.FC = () => {
       setSuccessMsg(res.message);
       setFile(null);
       setMedicine('');
+      if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+      }
       await fetchDocs();
     } catch (err: any) {
       console.error("Upload error:", err);
@@ -59,12 +63,12 @@ export const Documents: React.FC = () => {
     }
   };
 
-  const handleDelete = async (docId: string, filename: string) => {
-    if (!window.confirm(`Are you sure you want to delete '${filename}'?`)) return;
+  const handleDelete = async (documentName: string) => {
+    if (!window.confirm(`Are you sure you want to delete '${documentName}'?`)) return;
 
     try {
-      await deleteDocument(docId);
-      setSuccessMsg(`Document '${filename}' deleted successfully.`);
+      await deleteDocument(documentName);
+      setSuccessMsg(`Document '${documentName}' deleted successfully.`);
       await fetchDocs();
     } catch (err: any) {
       console.error("Delete error:", err);
@@ -107,6 +111,7 @@ export const Documents: React.FC = () => {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Drug Label PDF</label>
             <input
+              ref={fileInputRef}
               type="file"
               accept=".pdf"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
@@ -185,10 +190,10 @@ export const Documents: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {documents.map((doc) => (
-                  <tr key={doc.document_id} className="hover:bg-gray-50/80 transition-colors">
+                  <tr key={doc.document_name} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-3.5 font-medium text-gray-900 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                      {doc.filename}
+                      {doc.document_name}
                     </td>
                     <td className="px-4 py-3.5 capitalize font-normal text-gray-700">{doc.medicine}</td>
                     <td className="px-4 py-3.5 text-gray-600">{doc.total_pages}</td>
@@ -199,7 +204,7 @@ export const Documents: React.FC = () => {
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <button
-                        onClick={() => handleDelete(doc.document_id, doc.filename)}
+                        onClick={() => handleDelete(doc.document_name)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white hover:bg-red-50 text-red-600 border border-red-200 text-xs transition-colors"
                         title="Delete Document"
                       >
